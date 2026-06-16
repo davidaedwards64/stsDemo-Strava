@@ -93,6 +93,8 @@ async def auth_callback(
         return RedirectResponse(f"/auth/signin?error={msg}")
 
     saved_state = request.session.pop("oauth_state", None)
+    import logging as _logging
+    _logging.getLogger(__name__).warning("AUTH CALLBACK — incoming state=%r session_state=%r session_keys=%r", state, saved_state, list(request.session.keys()))
     if not state or state != saved_state:
         return RedirectResponse("/auth/signin?error=State+mismatch+%E2%80%94+please+try+again")
 
