@@ -60,7 +60,11 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
 2. Find the Strava app integration (search the App Integration Catalog with the **Brokered Consent** filter if not already added)
 3. Open the app and go to the **Resource server** tab
 4. Enter the **Client ID** and **Client secret** for your Strava API application
-5. Click **Add** to add each required scope (e.g. `activity:read_all`, `profile:read_all`)
+5. Click **Add** to add each required scope. For a read-only training assistant, add:
+   - `read` — public segments, routes, profile, posts, events, leaderboards
+   - `read_all` — private routes, private segments, private events
+   - `profile:read_all` — full profile regardless of visibility setting
+   - `activity:read_all` — all activities including privacy zones and private-visibility activities
 6. Click **Save**
 
 ### Step 4 — Okta APP_INSTANCE Managed Connection
