@@ -28,6 +28,10 @@ app = FastAPI(title="My Training Agent")
 _history: dict[str, list[dict[str, Any]]] = {}
 MAX_HISTORY_TURNS = 20  # keep last N user+assistant pairs
 
+# Server-side OAuth state store: state -> expiry timestamp.
+# Avoids relying on the session cookie surviving the HTTP→HTTPS redirect chain.
+_oauth_states: dict[str, float] = {}
+
 _session_key = _settings.session_secret or secrets.token_hex(32)
 app.add_middleware(SessionMiddleware, secret_key=_session_key, https_only=False)
 
