@@ -53,6 +53,7 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
 3. Generate an RSA key pair and register the **public key** with the AI Agent
    - Save the **private key JWK** (JSON string) → `OKTA_AGENT_PRIVATE_JWK`
    - Note the **Client ID** → `OKTA_AGENT_CLIENT_ID`
+4. Open the **Delegations** tab and assign the OIDC Web App from Step 1 — this allows the agent to act on behalf of users who sign in through that app
 
 ### Step 3 — Configure the Strava Resource Server Connector
 
