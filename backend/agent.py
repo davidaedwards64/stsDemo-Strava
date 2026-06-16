@@ -11,6 +11,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
 from backend.auth.okta_sts import exchange_id_token_for_strava_token
+from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
 
