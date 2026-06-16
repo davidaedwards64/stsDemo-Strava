@@ -27,7 +27,7 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
 | Component | Role |
 |-----------|------|
 | Okta OIDC Web App | Authenticates the user; issues an `id_token` |
-| Okta API Services App | The agent's machine identity; signs `client_assertion` JWTs |
+| Okta AI Agent (Directory → AI Agents) | The agent's machine identity; signs `client_assertion` JWTs |
 | Okta APP_INSTANCE connection | Brokers consent between the agent and Strava; resource indicator is an ORN |
 | RFC 8693 Token Exchange | Trades the user `id_token` for a Strava `access_token` |
 | Strava MCP Server | Exposes Strava data as MCP tools |
