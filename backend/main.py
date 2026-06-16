@@ -73,7 +73,10 @@ async def serve_signin():
 async def auth_start(request: Request):
     s = get_settings()
     state = secrets.token_urlsafe(32)
-    request.session["oauth_state"] = state
+    _oauth_states[state] = time.time() + 600  # 10-minute window
+    now = time.time()
+    for k in [k for k, exp in list(_oauth_states.items()) if now > exp]:
+        _oauth_states.pop(k, None)
 
     params = urllib.parse.urlencode({
         "client_id":     s.okta_client_id,
