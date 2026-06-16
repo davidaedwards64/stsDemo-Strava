@@ -25,15 +25,15 @@ class Settings(BaseSettings):
 
     @property
     def okta_issuer(self) -> str:
-        return f"https://{self.okta_domain}/oauth2/default" if self.okta_domain else ""
+        return f"https://{self.okta_domain}/oauth2" if self.okta_domain else ""
 
     @property
     def okta_token_url(self) -> str:
-        return f"{self.okta_issuer}/v1/token" if self.okta_issuer else ""
+        return f"https://{self.okta_domain}/oauth2/v1/token" if self.okta_domain else ""
 
     @property
     def okta_end_session_url(self) -> str:
-        return f"{self.okta_issuer}/v1/logout" if self.okta_issuer else ""
+        return f"https://{self.okta_domain}/oauth2/v1/logout" if self.okta_domain else ""
 
     class Config:
         env_file = ".env"
