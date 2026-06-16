@@ -224,10 +224,13 @@ async def run_agent(
                             continue
                         yield _sse("tool", {"name": block.name, "input": block.input})
                         try:
-                            result = await mcp.call_tool(block.name, block.input)
-                            result_text = "\n".join(
-                                getattr(c, "text", str(c)) for c in result.content
-                            )
+                            if block.name in _LOCAL_TOOL_NAMES:
+                                result_text = _handle_local_tool(block.name, block.input)
+                            else:
+                                result = await mcp.call_tool(block.name, block.input)
+                                result_text = "\n".join(
+                                    getattr(c, "text", str(c)) for c in result.content
+                                )
                             tool_results.append({
                                 "type": "tool_result",
                                 "tool_use_id": block.id,
