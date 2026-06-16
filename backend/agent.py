@@ -177,7 +177,7 @@ async def run_agent(
                         "input_schema": t.inputSchema,
                     }
                     for t in tools_result.tools
-                ]
+                ] + LOCAL_TOOLS
 
                 yield _sse("status", {"text": f"Ready ({len(claude_tools)} tools available)"})
                 yield _sse("token_meta", {
