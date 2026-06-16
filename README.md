@@ -65,7 +65,7 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
 1. Okta Admin → **AI → Managed Connections**
 2. Create a new connection:
    - **Connection type**: `APP_INSTANCE`
-   - **Resource**: link to the Strava Authorization Server from Step 3
+   - **Resource**: link to the Strava Resource Server from Step 3
    - **Associated AI Agent**: the API Services app from Step 2
 3. Copy the **resource indicator ORN** (format: `orn:okta:idp:{orgId}:client_auth_settings:{rscId}`) → `OKTA_STRAVA_RESOURCE_INDICATOR`
 
