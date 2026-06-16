@@ -54,11 +54,14 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
    - Save the **private key JWK** → `OKTA_AGENT_PRIVATE_JWK`
    - Note the **Client ID** → `OKTA_AGENT_CLIENT_ID`
 
-### Step 3 — Custom Resource Server for Strava
+### Step 3 — Configure the Strava Resource Server Connector
 
-1. Okta Admin → **Directory → Resource Servers → Add Resource Server**
-2. Name: "Strava", Audience: `api://strava` (or your preferred value)
-3. Add the Strava scopes your MCP server requires (e.g. `activity:read_all`, `profile:read_all`)
+1. Okta Admin → **Applications → Applications**
+2. Find the Strava app integration (search the App Integration Catalog with the **Brokered Consent** filter if not already added)
+3. Open the app and go to the **Resource server** tab
+4. Enter the **Client ID** and **Client secret** for your Strava API application
+5. Click **Add** to add each required scope (e.g. `activity:read_all`, `profile:read_all`)
+6. Click **Save**
 
 ### Step 4 — Okta APP_INSTANCE Managed Connection
 
