@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: stsDemo-Strava
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: OKTA_CLIENT_ID
+        sync: false
+      - key: OKTA_CLIENT_SECRET
+        sync: false
+      - key: OKTA_DOMAIN
+        sync: false
+      - key: OKTA_REDIRECT_URI
+        sync: false
+      - key: OKTA_POST_LOGOUT_REDIRECT_URI
+        sync: false
+      - key: OKTA_AGENT_CLIENT_ID
+        sync: false
+      - key: OKTA_AGENT_PRIVATE_JWK
+        sync: false
+      - key: OKTA_STRAVA_RESOURCE_INDICATOR
+        sync: false

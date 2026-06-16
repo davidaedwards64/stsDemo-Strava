@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Training Agent</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #ddd8d4;
+      font-weight: 600;
+      font-size: 15px;
+      color: #FC4C02;
+      background: #fff8f5;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header .app-icon { font-size: 20px; }
+    header .title { color: #1a1a1a; }
+
+    header .spacer { flex: 1; }
+
+    header .user-info {
+      font-size: 13px;
+      color: #7a7068;
+      font-weight: 400;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header .user-name { color: #1a1a1a; }
+
+    header .logout-btn {
+      font-size: 12px;
+      color: #7a7068;
+      background: #ffe8dc;
+      border: 1px solid #ddd8d4;
+      border-radius: 4px;
+      padding: 3px 10px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    header .logout-btn:hover { color: #1a1a1a; border-color: #7a7068; }
+
+    /* ── Two-pane layout ─────────────────────────────────── */
+
+    #content-row {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Left pane: chat ─────────────────────────────────── */
+
+    #chat-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .msg {
+      max-width: 720px;
+      width: fit-content;
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg.user {
+      background: #FC4C02;
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.assistant {
+      background: #ffffff;
+      border: 1px solid #ddd8d4;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.status {
+      background: transparent;
+      border: none;
+      color: #7a7068;
+      font-size: 13px;
+      padding: 2px 0;
+      align-self: flex-start;
+    }
+
+    .msg.auth-required {
+      background: #ffffff;
+      border: 1px solid #FC4C02;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .msg.auth-required .auth-text {
+      color: #1a1a1a;
+      font-size: 14px;
+    }
+
+    .msg.auth-required .auth-link {
+      display: inline-block;
+      background: #FC4C02;
+      color: #fff;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    .msg.auth-required .auth-link:hover { background: #e04402; }
+
+    .tool-call {
+      background: #fff0e8;
+      border: 1px solid #ddd8d4;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 8px;
+      font-size: 13px;
+      max-width: 720px;
+    }
+
+    .tool-call .tool-name {
+      color: #FC4C02;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .tool-call .tool-input {
+      color: #7a7068;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    #input-area {
+      padding: 16px 20px;
+      border-top: 1px solid #ddd8d4;
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    #input {
+      flex: 1;
+      background: #ffffff;
+      border: 1px solid #ddd8d4;
+      color: #1a1a1a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      min-height: 42px;
+      max-height: 160px;
+      line-height: 1.5;
+    }
+
+    #input:focus { border-color: #FC4C02; }
+
+    #send {
+      background: #FC4C02;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      cursor: pointer;
+      align-self: flex-end;
+      white-space: nowrap;
+    }
+
+    #send:disabled { background: #ffe8dc; color: #b09080; cursor: not-allowed; }
+    #send:not(:disabled):hover { background: #e04402; }
+
+    /* ── Right pane: security dashboard ─────────────────── */
+
+    #security-pane {
+      width: 300px;
+      flex-shrink: 0;
+      border-left: 1px solid #ddd8d4;
+      background: #f5f5f5;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9a9088;
+      margin-bottom: 8px;
+    }
+
+    /* User identity card */
+
+    #identity-card {
+      background: #ffffff;
+      border: 1px solid #ddd8d4;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    #identity-card .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    #identity-card .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #FC4C02;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    #identity-card .user-details {
+      overflow: hidden;
+    }
+
+    #identity-card .user-display-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a1a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #identity-card .user-email {
+      font-size: 11px;
+      color: #7a7068;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #identity-card .provider-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #ffe8dc;
+      border: 1px solid #ddd8d4;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #7a7068;
+    }
+
+    #identity-card .provider-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #2ea043;
+    }
+
+    /* Auth flow steps */
+
+    #auth-flow-card {
+      background: #ffffff;
+      border: 1px solid #ddd8d4;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      position: relative;
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 30px;
+      bottom: -6px;
+      width: 1px;
+      background: #ddd8d4;
+    }
+
+    .step-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .step-icon.idle {
+      background: #fff8f5;
+      border: 1px solid #ddd8d4;
+      color: #9a9088;
+    }
+
+    .step-icon.active {
+      background: #eff5ff;
+      border: 1px solid #1a6bdc;
+      color: #1a6bdc;
+    }
+
+    .step-icon.success {
+      background: #eefbee;
+      border: 1px solid #2ea043;
+      color: #1a6b1a;
+    }
+
+    .step-icon.warn {
+      background: #fff8e6;
+      border: 1px solid #b07e00;
+      color: #7a5500;
+    }
+
+    .step-icon.error {
+      background: #ffeeed;
+      border: 1px solid #d1242f;
+      color: #b91c1c;
+    }
+
+    .step-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .step-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1a1a1a;
+      line-height: 1.4;
+    }
+
+    .step-detail {
+      font-size: 11px;
+      color: #7a7068;
+      margin-top: 2px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .step-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .step-badge.success { background: #eefbee; color: #1a6b1a; border: 1px solid #2ea043; }
+    .step-badge.active  { background: #eff5ff; color: #1a6bdc; border: 1px solid #1a6bdc; }
+    .step-badge.warn    { background: #fff8e6; color: #7a5500; border: 1px solid #b07e00; }
+    .step-badge.error   { background: #ffeeed; color: #b91c1c; border: 1px solid #d1242f; }
+    .step-badge.idle    { background: #fff8f5; color: #9a9088; border: 1px solid #ddd8d4; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { display: inline-block; animation: spin 1s linear infinite; }
+
+    /* Step token-detail meta panels */
+
+    .step-meta {
+      display: none;
+      margin-top: 8px;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 10px;
+      background: #fff0e8;
+      border: 1px solid #ddd8d4;
+      border-radius: 5px;
+      padding: 7px 8px;
+    }
+
+    .step-meta.visible { display: block; }
+
+    .meta-row {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      padding: 1px 0;
+      min-width: 0;
+    }
+
+    .meta-key {
+      flex-shrink: 0;
+      width: 40px;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #9a9088;
+    }
+
+    .meta-val {
+      flex: 1;
+      color: #1a4bdc;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .meta-val.muted  { color: #7a7068; }
+    .meta-val.green  { color: #1a6b1a; }
+    .meta-val.yellow { color: #7a5500; }
+
+    .meta-sep {
+      border: none;
+      border-top: 1px solid #ddd8d4;
+      margin: 5px 0;
+    }
+
+    .tool-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 5px;
+      max-height: 72px;
+      overflow-y: auto;
+    }
+
+    .tool-chip {
+      font-size: 9px;
+      background: #ffe8dc;
+      color: #7a7068;
+      border-radius: 3px;
+      padding: 1px 5px;
+      white-space: nowrap;
+    }
+
+    /* Footer badge */
+
+    .o4aa-badge {
+      font-size: 10px;
+      color: #9a9088;
+      text-align: center;
+      padding: 4px 0;
+      margin-top: auto;
+    }
+
+    .o4aa-badge strong {
+      color: #7a7068;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="app-icon">🏃</span>
+    <span class="title">My Training Agent</span>
+    <span class="spacer"></span>
+    <div class="user-info">
+      <span class="user-name" id="user-name"></span>
+      <a class="logout-btn" href="/auth/logout">Sign out</a>
+    </div>
+  </header>
+
+  <div id="content-row">
+
+    <!-- Left: chat -->
+    <div id="chat-pane">
+      <div id="messages"></div>
+      <div id="input-area">
+        <textarea id="input" placeholder="Ask about your training performance..." rows="1"></textarea>
+        <button id="send">Send</button>
+      </div>
+    </div>
+
+    <!-- Right: security dashboard -->
+    <div id="security-pane">
+
+      <!-- User identity -->
+      <div id="identity-card">
+        <div class="panel-section-title">Signed-in User</div>
+        <div class="card-header">
+          <div class="avatar" id="avatar">?</div>
+          <div class="user-details">
+            <div class="user-display-name" id="panel-user-name">—</div>
+            <div class="user-email" id="panel-user-email">—</div>
+          </div>
+        </div>
+        <div class="provider-badge">
+          <div class="provider-dot"></div>
+          Authenticated via Okta
+        </div>
+      </div>
+
+      <!-- Auth flow -->
+      <div id="auth-flow-card">
+        <div class="panel-section-title">Auth &amp; Token Flow</div>
+
+        <!-- Step 1: OIDC Login -->
+        <div class="flow-step" id="step-oidc">
+          <div class="step-icon success" id="step-oidc-icon">✓</div>
+          <div class="step-body">
+            <div class="step-title">Okta OIDC Login</div>
+            <div class="step-detail" id="step-oidc-detail">Session established</div>
+            <span class="step-badge success">Complete</span>
+            <div class="step-meta" id="step-oidc-meta"></div>
+          </div>
+        </div>
+
+        <!-- Step 2: STS Token Exchange -->
+        <div class="flow-step" id="step-sts">
+          <div class="step-icon idle" id="step-sts-icon">2</div>
+          <div class="step-body">
+            <div class="step-title">STS Token Exchange</div>
+            <div class="step-detail" id="step-sts-detail">id_token → Strava token (APP_INSTANCE)</div>
+            <span class="step-badge idle" id="step-sts-badge">Pending</span>
+            <div class="step-meta" id="step-sts-meta"></div>
+          </div>
+        </div>
+
+        <!-- Step 3: Strava MCP -->
+        <div class="flow-step" id="step-mcp">
+          <div class="step-icon idle" id="step-mcp-icon">3</div>
+          <div class="step-body">
+            <div class="step-title">Strava MCP Session</div>
+            <div class="step-detail" id="step-mcp-detail">Streamable-HTTP connection</div>
+            <span class="step-badge idle" id="step-mcp-badge">Pending</span>
+            <div class="step-meta" id="step-mcp-meta"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="o4aa-badge">Powered by <strong>Okta for AI Agents</strong></div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const messagesEl = document.getElementById('messages');
+    const inputEl    = document.getElementById('input');
+    const sendBtn    = document.getElementById('send');
+
+    // ── User identity ──────────────────────────────────────
+
+    fetch('/api/me').then(r => r.json()).then(user => {
+      if (!user.authenticated) { window.location.href = '/auth/signin'; return; }
+
+      const name = user.name || user.email;
+      document.getElementById('user-name').textContent = name;
+      document.getElementById('panel-user-name').textContent = name;
+      document.getElementById('panel-user-email').textContent = user.email || '';
+
+      const initials = name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(w => w[0].toUpperCase())
+        .join('');
+      document.getElementById('avatar').textContent = initials || '?';
+
+      if (user.id_token_claims) {
+        const c = user.id_token_claims;
+        const issDisplay = (c.iss || '').replace(/^https?:\/\//, '');
+        const audDisplay = Array.isArray(c.aud) ? c.aud[0] : (c.aud || '—');
+        renderMeta('oidc', `
+          <div class="meta-row"><span class="meta-key">iss</span><span class="meta-val muted" title="${c.iss || ''}">${issDisplay || '—'}</span></div>
+          <div class="meta-row"><span class="meta-key">sub</span><span class="meta-val" title="${c.sub || ''}">${c.sub || '—'}</span></div>
+          <div class="meta-row"><span class="meta-key">aud</span><span class="meta-val muted" title="${audDisplay}">${audDisplay}</span></div>
+          <hr class="meta-sep">
+          <div class="meta-row"><span class="meta-key">iat</span><span class="meta-val muted">${fmtTime(c.iat)}</span></div>
+          <div class="meta-row"><span class="meta-key">exp</span><span class="meta-val muted">${fmtTime(c.exp)}</span></div>
+        `);
+      }
+    });
+
+    // ── Auth flow step helpers ─────────────────────────────
+
+    function setStep(id, state, detail) {
+      const icon  = document.getElementById(`step-${id}-icon`);
+      const badge = document.getElementById(`step-${id}-badge`);
+      const det   = document.getElementById(`step-${id}-detail`);
+
+      const labels = { idle: 'Pending', active: 'In progress…', success: 'Complete', warn: 'Consent needed', error: 'Failed' };
+      const icons  = { idle: id === 'sts' ? '2' : '3', active: '<span class="spin">⟳</span>', success: '✓', warn: '!', error: '✕' };
+
+      icon.className  = `step-icon ${state}`;
+      icon.innerHTML  = icons[state] || id;
+      badge.className = `step-badge ${state}`;
+      badge.textContent = labels[state] || state;
+      if (detail !== undefined) det.textContent = detail;
+    }
+
+    function resetAuthFlow() {
+      setStep('sts', 'idle', 'id_token → Strava token (APP_INSTANCE)');
+      setStep('mcp', 'idle', 'Streamable-HTTP connection');
+      ['sts', 'mcp'].forEach(id => {
+        const el = document.getElementById(`step-${id}-meta`);
+        if (el) { el.innerHTML = ''; el.classList.remove('visible'); }
+      });
+    }
+
+    function fmtTime(ts) {
+      if (!ts) return '—';
+      return new Date(ts * 1000).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+    }
+    function fmtDuration(sec) {
+      if (!sec) return '—';
+      if (sec < 60) return `${sec}s`;
+      if (sec < 3600) return `${Math.round(sec / 60)}m`;
+      return `${Math.floor(sec / 3600)}h ${Math.round((sec % 3600) / 60)}m`;
+    }
+    function renderMeta(id, html) {
+      const el = document.getElementById(`step-${id}-meta`);
+      if (!el) return;
+      el.innerHTML = html;
+      el.classList.add('visible');
+    }
+
+    // ── Chat helpers ───────────────────────────────────────
+
+    function addMsg(cls, text) {
+      const el = document.createElement('div');
+      el.className = `msg ${cls}`;
+      el.textContent = text;
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return el;
+    }
+
+    function addAuthRequired(uri) {
+      const el = document.createElement('div');
+      el.className = 'msg auth-required';
+      const text = document.createElement('div');
+      text.className = 'auth-text';
+      text.textContent = 'Strava access needs authorization. Click below to grant access, then re-send your message.';
+      const link = document.createElement('a');
+      link.className = 'auth-link';
+      link.href = uri;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Authorize Strava Access →';
+      el.appendChild(text);
+      el.appendChild(link);
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function addToolCall(name, input) {
+      const el = document.createElement('div');
+      el.className = 'tool-call';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'tool-name';
+      nameEl.textContent = `⚙ ${name}`;
+      const inputEl2 = document.createElement('div');
+      inputEl2.className = 'tool-input';
+      inputEl2.textContent = JSON.stringify(input, null, 2);
+      el.appendChild(nameEl);
+      el.appendChild(inputEl2);
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // ── Input sizing ───────────────────────────────────────
+
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); }
+    });
+
+    // ── Send / SSE ─────────────────────────────────────────
+
+    sendBtn.addEventListener('click', async () => {
+      const message = inputEl.value.trim();
+      if (!message) return;
+
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      addMsg('user', message);
+      resetAuthFlow();
+
+      let statusEl      = null;
+      let assistantEl   = null;
+      let assistantText = '';
+
+      try {
+        const resp = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message }),
+        });
+
+        if (resp.status === 401) { window.location.href = '/auth/signin'; return; }
+        if (!resp.ok) { addMsg('status', `Error: ${resp.status} ${resp.statusText}`); return; }
+
+        const reader  = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop();
+
+          for (const part of parts) {
+            const lines = part.trim().split('\n');
+            let event = 'message', data = '';
+            for (const line of lines) {
+              if (line.startsWith('event: ')) event = line.slice(7);
+              else if (line.startsWith('data: ')) data = line.slice(6);
+            }
+            if (!data) continue;
+
+            const payload = JSON.parse(data);
+
+            if (event === 'status') {
+              if (statusEl) statusEl.remove();
+              statusEl = addMsg('status', `⟳ ${payload.text}`);
+
+              // Map status messages to flow step updates
+              const t = payload.text;
+              if (t === 'Authenticating with Strava...') {
+                setStep('sts', 'active', 'Exchanging id_token for Strava token…');
+              } else if (t === 'Connecting to Strava MCP...') {
+                setStep('sts', 'success', 'Strava access token issued');
+                setStep('mcp', 'active', 'Opening streamable-HTTP session…');
+              } else if (t.startsWith('Ready (')) {
+                const m = t.match(/Ready \((\d+) tools/);
+                setStep('mcp', 'success', m ? `${m[1]} tools available` : 'Session established');
+              }
+
+            } else if (event === 'text') {
+              if (statusEl) { statusEl.remove(); statusEl = null; }
+              if (!assistantEl) { assistantEl = addMsg('assistant', ''); assistantText = ''; }
+              assistantText += payload.text;
+              assistantEl.textContent = assistantText;
+              messagesEl.scrollTop = messagesEl.scrollHeight;
+
+            } else if (event === 'tool') {
+              addToolCall(payload.name, payload.input);
+              assistantEl = null;
+
+            } else if (event === 'interaction_required') {
+              if (statusEl) { statusEl.remove(); statusEl = null; }
+              setStep('sts', 'warn', 'User consent required');
+              addAuthRequired(payload.uri);
+
+            } else if (event === 'error') {
+              if (statusEl) { statusEl.remove(); statusEl = null; }
+              addMsg('status', `Error: ${payload.text}`);
+              // Mark the in-progress step as errored
+              const stsIcon  = document.getElementById('step-sts-icon');
+              const mcpIcon  = document.getElementById('step-mcp-icon');
+              if (stsIcon.classList.contains('active'))  setStep('sts', 'error', payload.text.slice(0, 80));
+              else if (mcpIcon.classList.contains('active')) setStep('mcp', 'error', payload.text.slice(0, 80));
+
+            } else if (event === 'token_meta') {
+              if (payload.step === 'sts') {
+                renderMeta('sts', `
+                  <div class="meta-row"><span class="meta-key">tok</span><span class="meta-val" title="${payload.token_prefix || ''}">${payload.token_prefix || '—'}</span></div>
+                  <div class="meta-row"><span class="meta-key">exp</span><span class="meta-val green">${fmtDuration(payload.expires_in)}</span></div>
+                  <div class="meta-row"><span class="meta-key">src</span><span class="meta-val ${payload.cached ? 'yellow' : 'green'}">${payload.cached ? 'cached' : 'fresh'}</span></div>
+                `);
+              } else if (payload.step === 'mcp') {
+                const chips = (payload.tools || []).map(t =>
+                  `<span class="tool-chip" title="${t}">${t.replace(/^strava_/, '')}</span>`
+                ).join('');
+                renderMeta('mcp', `
+                  <div class="meta-row"><span class="meta-key">tools</span><span class="meta-val green">${payload.tool_count}</span></div>
+                  <div class="tool-chips">${chips}</div>
+                `);
+              }
+
+            } else if (event === 'done') {
+              if (statusEl) { statusEl.remove(); statusEl = null; }
+            }
+          }
+        }
+      } catch (err) {
+        addMsg('status', `Error: ${err.message}`);
+      } finally {
+        sendBtn.disabled = false;
+        inputEl.focus();
+      }
+    });
+
+    inputEl.focus();
+  </script>
+</body>
+</html>
