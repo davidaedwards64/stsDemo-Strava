@@ -56,7 +56,7 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
 
 ### Step 3 — Custom Resource Server for Strava
 
-1. Okta Admin → **Security → API → Add Authorization Server**
+1. Okta Admin → **Directory → Resource Servers → Add Resource Server**
 2. Name: "Strava", Audience: `api://strava` (or your preferred value)
 3. Add the Strava scopes your MCP server requires (e.g. `activity:read_all`, `profile:read_all`)
 
