@@ -46,12 +46,12 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
 3. Set **Sign-out redirect URI**: `http://localhost:8000/`
 4. Note the **Client ID** → `OKTA_CLIENT_ID` and **Client Secret** → `OKTA_CLIENT_SECRET`
 
-### Step 2 — AI Agent Workload Principal (API Services app)
+### Step 2 — AI Agent Workload Principal (AI Agent object)
 
-1. Okta Admin → **Applications → Create App Integration → API Services**
+1. Okta Admin → **Directory → AI Agents → Create AI Agent**
 2. Name it e.g. "My Training Agent"
-3. Under **Client Credentials → Keys**: click **Add Key → Generate**
-   - Save the **private key JWK** → `OKTA_AGENT_PRIVATE_JWK`
+3. Generate an RSA key pair and register the **public key** with the AI Agent
+   - Save the **private key JWK** (JSON string) → `OKTA_AGENT_PRIVATE_JWK`
    - Note the **Client ID** → `OKTA_AGENT_CLIENT_ID`
 
 ### Step 3 — Configure the Strava Resource Server Connector
