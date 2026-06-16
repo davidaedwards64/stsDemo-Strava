@@ -113,7 +113,7 @@ async def run_agent(
                     "- When presenting activity data, include key metrics: distance, time, pace/speed, elevation, heart rate where available."
                 )
 
-                client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+                client = anthropic.AsyncAnthropic(api_key=get_settings().anthropic_api_key)
                 messages: list[dict] = list(history or []) + [{"role": "user", "content": user_message}]
 
                 for _ in range(MAX_ITERATIONS):
