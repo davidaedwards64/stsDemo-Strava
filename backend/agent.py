@@ -20,6 +20,89 @@ MCP_URL = "https://mcp.strava.com/mcp"
 MODEL = "claude-opus-4-7"
 MAX_ITERATIONS = 10
 
+REPORTS_DIR = Path(__file__).parent.parent / "reports"
+
+LOCAL_TOOLS = [
+    {
+        "name": "save_report",
+        "description": (
+            "Save analysis, notes, or structured data to a markdown file in the reports directory. "
+            "Use this to persist findings so they can be reloaded in future sessions."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": "Filename to save (e.g. 'run_analysis.md'). Must end in .md and contain no path separators.",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Markdown content to write to the file.",
+                },
+            },
+            "required": ["filename", "content"],
+        },
+    },
+    {
+        "name": "read_report",
+        "description": "Read a previously saved report from the reports directory.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": "Filename to read (e.g. 'run_analysis.md').",
+                },
+            },
+            "required": ["filename"],
+        },
+    },
+    {
+        "name": "list_reports",
+        "description": "List all saved report files in the reports directory.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+]
+
+_LOCAL_TOOL_NAMES = {t["name"] for t in LOCAL_TOOLS}
+
+
+def _safe_report_path(filename: str) -> Path:
+    """Resolve filename inside REPORTS_DIR; raise ValueError if traversal attempted."""
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise ValueError(f"Invalid filename: {filename!r}")
+    if not filename.endswith(".md"):
+        raise ValueError("Filename must end in .md")
+    return REPORTS_DIR / filename
+
+
+def _handle_local_tool(name: str, args: dict) -> str:
+    if name == "save_report":
+        path = _safe_report_path(args["filename"])
+        REPORTS_DIR.mkdir(exist_ok=True)
+        path.write_text(args["content"], encoding="utf-8")
+        return f"Saved {args['filename']} ({len(args['content'])} chars)"
+
+    if name == "read_report":
+        path = _safe_report_path(args["filename"])
+        if not path.exists():
+            raise FileNotFoundError(f"{args['filename']} not found in reports/")
+        return path.read_text(encoding="utf-8")
+
+    if name == "list_reports":
+        REPORTS_DIR.mkdir(exist_ok=True)
+        files = sorted(p.name for p in REPORTS_DIR.glob("*.md"))
+        if not files:
+            return "No reports saved yet."
+        return "\n".join(files)
+
+    raise ValueError(f"Unknown local tool: {name}")
+
 
 def _sse(event: str, data: Any) -> str:
     payload = json.dumps(data) if not isinstance(data, str) else data
