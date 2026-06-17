@@ -143,7 +143,7 @@ async def auth_logout(request: Request):
     id_token = request.session.get("id_token", "")
     if sub:
         _history.pop(sub, None)
-        clear_cached_token(sub)
+        await revoke_sts_token(sub)
     request.session.clear()
 
     s = get_settings()
