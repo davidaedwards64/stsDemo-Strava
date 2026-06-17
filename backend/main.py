@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 from backend.agent import run_agent
-from backend.auth.okta_sts import clear_cached_token
+from backend.auth.okta_sts import revoke_sts_token
 from backend.config import get_settings
 
 _settings = get_settings()
