@@ -26,6 +26,52 @@ def clear_cached_token(cache_key: str) -> None:
     _cache.pop(cache_key, None)
 
 
+async def revoke_sts_token(cache_key: str) -> None:
+    """Revoke the cached STS token at Okta's revoke endpoint, then clear the local cache entry.
+
+    Uses private_key_jwt client auth (same credentials as the original STS exchange).
+    Clears the cache entry regardless of whether revocation succeeds.
+    """
+    entry = _cache.get(cache_key)
+    if not entry:
+        return
+
+    access_token = entry.get("data", {}).get("access_token")
+    if not access_token:
+        _cache.pop(cache_key, None)
+        return
+
+    settings = get_settings()
+    if not settings.okta_agent_client_id or not settings.okta_agent_private_jwk or not settings.okta_revoke_url:
+        _cache.pop(cache_key, None)
+        return
+
+    try:
+        revoke_url = settings.okta_revoke_url
+        client_assertion = create_client_assertion_jwt(
+            settings.okta_agent_client_id,
+            settings.okta_agent_private_jwk,
+            revoke_url,
+        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                revoke_url,
+                data={
+                    "token": access_token,
+                    "token_type_hint": "oauth_sts",
+                    "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+                    "client_assertion": client_assertion,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+        if not resp.is_success:
+            logger.warning("STS token revocation failed (%s): %s", resp.status_code, resp.text)
+    except Exception:
+        logger.exception("Unexpected error revoking STS token for %s", cache_key)
+    finally:
+        _cache.pop(cache_key, None)
+
+
 def create_client_assertion_jwt(client_id: str, private_jwk_str: str, token_url: str) -> str:
     """Sign a short-lived RS256 JWT for use as client_assertion in the token exchange."""
     private_jwk = json.loads(private_jwk_str)
