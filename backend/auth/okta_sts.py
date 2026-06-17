@@ -31,23 +31,31 @@ async def revoke_sts_token(cache_key: str) -> None:
 
     Uses private_key_jwt client auth (same credentials as the original STS exchange).
     Clears the cache entry regardless of whether revocation succeeds.
+    NOTE: per OKTA-1153944, this only clears the *access token* from Okta's token store.
+    If Okta still holds a valid refresh token, the next STS exchange will succeed again.
     """
     entry = _cache.get(cache_key)
     if not entry:
+        logger.info("[revoke_sts] No cached STS token for %s — nothing to revoke", cache_key)
         return
 
     access_token = entry.get("data", {}).get("access_token")
     if not access_token:
+        logger.info("[revoke_sts] Cache entry for %s has no access_token — clearing", cache_key)
         _cache.pop(cache_key, None)
         return
 
     settings = get_settings()
     if not settings.okta_agent_client_id or not settings.okta_agent_private_jwk or not settings.okta_revoke_url:
+        logger.warning("[revoke_sts] Missing agent credentials or revoke URL — clearing cache only")
         _cache.pop(cache_key, None)
         return
 
+    revoke_url = settings.okta_revoke_url
+    token_prefix = access_token[:12] + "..."
+    logger.info("[revoke_sts] Revoking STS token %s for %s at %s", token_prefix, cache_key, revoke_url)
+
     try:
-        revoke_url = settings.okta_revoke_url
         client_assertion = create_client_assertion_jwt(
             settings.okta_agent_client_id,
             settings.okta_agent_private_jwk,
@@ -64,12 +72,21 @@ async def revoke_sts_token(cache_key: str) -> None:
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
-        if not resp.is_success:
-            logger.warning("STS token revocation failed (%s): %s", resp.status_code, resp.text)
+        # Okta always returns 200 regardless of whether the token existed (OKTA-1153944)
+        logger.info(
+            "[revoke_sts] Response: HTTP %s — body: %s",
+            resp.status_code,
+            resp.text[:200] or "(empty)",
+        )
+        if resp.is_success:
+            logger.info("[revoke_sts] STS access token revoked for %s (Okta refresh token unaffected)", cache_key)
+        else:
+            logger.warning("[revoke_sts] Unexpected non-2xx from revoke endpoint (%s): %s", resp.status_code, resp.text)
     except Exception:
-        logger.exception("Unexpected error revoking STS token for %s", cache_key)
+        logger.exception("[revoke_sts] Unexpected error revoking STS token for %s", cache_key)
     finally:
         _cache.pop(cache_key, None)
+        logger.info("[revoke_sts] Local cache entry cleared for %s", cache_key)
 
 
 def create_client_assertion_jwt(client_id: str, private_jwk_str: str, token_url: str) -> str:
