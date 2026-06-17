@@ -32,6 +32,10 @@ class Settings(BaseSettings):
         return f"https://{self.okta_domain}/oauth2/v1/token" if self.okta_domain else ""
 
     @property
+    def okta_revoke_url(self) -> str:
+        return f"https://{self.okta_domain}/oauth2/v1/revoke" if self.okta_domain else ""
+
+    @property
     def okta_end_session_url(self) -> str:
         return f"https://{self.okta_domain}/oauth2/v1/logout" if self.okta_domain else ""
 
