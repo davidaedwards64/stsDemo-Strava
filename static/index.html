@@ -824,7 +824,11 @@
               if (statusEl) { statusEl.remove(); statusEl = null; }
               if (!assistantEl) { assistantEl = addMsg('assistant', ''); assistantText = ''; }
               assistantText += payload.text;
-              assistantEl.innerHTML = marked.parse(assistantText);
+              const rendered = marked.parse(assistantText);
+              assistantEl.innerHTML = rendered.replace(
+                /<table(\s[^>]*)?>/g,
+                '<div class="table-wrap"><table$1>'
+              ).replace(/<\/table>/g, '</table></div>');
               messagesEl.scrollTop = messagesEl.scrollHeight;
 
             } else if (event === 'tool') {
