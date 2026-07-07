@@ -188,6 +188,13 @@ async def chat(request: Request, body: ChatRequest):
     if not user_id_token:
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
 
+    # id_tokens expire (~1 hour). If expired the STS exchange will fail with
+    # "subject_token is invalid". Force re-login instead of a confusing error.
+    token_exp = _decode_jwt_payload(user_id_token).get("exp", 0)
+    if token_exp and token_exp < time.time():
+        request.session.clear()
+        return JSONResponse({"error": "Session expired — please sign in again"}, status_code=401)
+
     sub = (request.session.get("user") or {}).get("sub") or "anonymous"
     history = list(_history.get(sub, []))
 
