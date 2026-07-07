@@ -819,7 +819,7 @@
               if (statusEl) { statusEl.remove(); statusEl = null; }
               if (!assistantEl) { assistantEl = addMsg('assistant', ''); assistantText = ''; }
               assistantText += payload.text;
-              assistantEl.textContent = assistantText;
+              assistantEl.innerHTML = marked.parse(assistantText);
               messagesEl.scrollTop = messagesEl.scrollHeight;
 
             } else if (event === 'tool') {
