@@ -57,7 +57,12 @@ def _decode_jwt_payload(token: str) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_ui(request: Request):
-    if not request.session.get("id_token"):
+    id_token = request.session.get("id_token")
+    if not id_token:
+        return RedirectResponse("/auth/signin")
+    token_exp = _decode_jwt_payload(id_token).get("exp", 0)
+    if token_exp and token_exp < time.time():
+        request.session.clear()
         return RedirectResponse("/auth/signin")
     return HTMLResponse(content=(STATIC_DIR / "index.html").read_text(encoding="utf-8"))
 
