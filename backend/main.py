@@ -84,6 +84,7 @@ async def auth_start(request: Request):
         "scope":         "openid email profile",
         "redirect_uri":  s.okta_redirect_uri,
         "state":         state,
+        "prompt":        "login",
     })
     return RedirectResponse(f"{s.okta_issuer}/v1/authorize?{params}")
 
