@@ -61,16 +61,16 @@ The AI Agent object and its OIDC Web App definition are linked: they share one C
    - `activity:read_all` — all activities including privacy zones and private-visibility activities
 6. Click **Save**
 
-### Step 4 — Okta APP_INSTANCE Managed Connection
+### Step 3 — Okta APP_INSTANCE Managed Connection
 
 1. Okta Admin → **AI → Managed Connections**
 2. Create a new connection:
    - **Connection type**: `APP_INSTANCE`
-   - **Resource**: link to the Strava app's resource server connector from Step 3
-   - **Associated AI Agent**: the API Services app from Step 2
+   - **Resource**: link to the Strava app's resource server connector from Step 2
+   - **Associated AI Agent**: the AI Agent from Step 1
 3. Copy the **resource indicator ORN** (format: `orn:okta:idp:{orgId}:client_auth_settings:{rscId}`) → `OKTA_STRAVA_RESOURCE_INDICATOR`
 
-### Step 5 — User consent (first use)
+### Step 4 — User consent (first use)
 
 On the first request, the STS exchange returns `interaction_required`. The UI displays a consent link — the user clicks it, approves Strava access in Okta, then retries. Subsequent requests use the cached token.
 
