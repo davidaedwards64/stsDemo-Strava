@@ -27,7 +27,7 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
 | Component | Role |
 |-----------|------|
 | Okta OIDC Web App | Authenticates the user; issues an `id_token` |
-| Okta AI Agent (Directory → AI Agents) | The agent's machine identity; signs `client_assertion` JWTs |
+| Okta AI Agent (Directory → AI Agents) | The agent's machine identity; linked to the Web App with the same Client ID and client secret auth |
 | Okta APP_INSTANCE connection | Brokers consent between the agent and Strava; resource indicator is an ORN |
 | RFC 8693 Token Exchange | Trades the user `id_token` for a Strava `access_token` |
 | Strava MCP Server | Exposes Strava data as MCP tools |
@@ -39,23 +39,16 @@ FastAPI ──RFC 8693 STS──► Okta Token Exchange
 
 > **Prerequisite:** The `SECURE_AI_OAUTH_STS` feature flag must be enabled on your Okta org. Contact Okta support if needed.
 
-### Step 1 — Agentic Web App (OIDC client for user login)
+### Step 1 — AI Agent and linked Web App
 
-1. Okta Admin → **Applications → Create App Integration → OIDC → Web Application**
-2. Set **Sign-in redirect URI**: `http://localhost:8000/auth/callback`
-3. Set **Sign-out redirect URI**: `http://localhost:8000/`
+The AI Agent object and its OIDC Web App definition are linked: they share one Client ID and must use the same authentication method (client secret). The app uses this single credential for user login, the STS token exchange and token revocation.
+
+1. Okta Admin → **Directory → AI Agents → Create AI Agent** and name it e.g. "My Training Agent"
+2. Configure the linked Web App with **Sign-in redirect URI** `http://localhost:8000/auth/callback` and **Sign-out redirect URI** `http://localhost:8000/`
+3. Use **Client secret** as the authentication method
 4. Note the **Client ID** → `OKTA_CLIENT_ID` and **Client Secret** → `OKTA_CLIENT_SECRET`
 
-### Step 2 — AI Agent Workload Principal (AI Agent object)
-
-1. Okta Admin → **Directory → AI Agents → Create AI Agent**
-2. Name it e.g. "My Training Agent"
-3. Generate an RSA key pair and register the **public key** with the AI Agent
-   - Save the **private key JWK** (JSON string) → `OKTA_AGENT_PRIVATE_JWK`
-   - Note the **Client ID** → `OKTA_AGENT_CLIENT_ID`
-4. Open the **Delegations** tab and assign the OIDC Web App from Step 1 — this allows the agent to act on behalf of users who sign in through that app
-
-### Step 3 — Configure the Strava Resource Server Connector
+### Step 2 — Configure the Strava Resource Server Connector
 
 1. Okta Admin → **Applications → Applications**
 2. Find the Strava app integration (search the App Integration Catalog with the **Brokered Consent** filter if not already added)
@@ -121,13 +114,11 @@ open http://localhost:8000
 |----------|----------|-------------|
 | `ANTHROPIC_API_KEY` | ✓ | Anthropic API key |
 | `SESSION_SECRET` | ✓ | Random hex string for session signing |
-| `OKTA_CLIENT_ID` | ✓ | OIDC Web App client ID |
-| `OKTA_CLIENT_SECRET` | ✓ | OIDC Web App client secret |
+| `OKTA_CLIENT_ID` | ✓ | AI Agent / linked Web App client ID (used for login and STS) |
+| `OKTA_CLIENT_SECRET` | ✓ | Client secret for the same app |
 | `OKTA_DOMAIN` | ✓ | e.g. `your-org.okta.com` |
 | `OKTA_REDIRECT_URI` | ✓ | e.g. `http://localhost:8000/auth/callback` |
 | `OKTA_POST_LOGOUT_REDIRECT_URI` | | Post-logout redirect (optional) |
-| `OKTA_AGENT_CLIENT_ID` | ✓ | API Services app client ID |
-| `OKTA_AGENT_PRIVATE_JWK` | ✓ | RS256 private key JWK (JSON string) |
 | `OKTA_STRAVA_RESOURCE_INDICATOR` | ✓ | ORN for the APP_INSTANCE Strava connection |
 
 ---
@@ -143,8 +134,8 @@ subject_token=<user id_token>
 subject_token_type=urn:ietf:params:oauth:token-type:id_token
 requested_token_type=urn:okta:params:oauth:token-type:oauth-sts
 resource=orn:okta:idp:{orgId}:client_auth_settings:{rscId}
-client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer
-client_assertion=<RS256 JWT signed by agent private key>
+client_id=<OKTA_CLIENT_ID>
+client_secret=<OKTA_CLIENT_SECRET>
 ```
 
 Success → `200 { "access_token": "...", "expires_in": 3600 }`  

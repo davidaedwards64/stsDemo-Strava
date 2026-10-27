@@ -19,9 +19,5 @@ services:
         sync: false
       - key: OKTA_POST_LOGOUT_REDIRECT_URI
         sync: false
-      - key: OKTA_AGENT_CLIENT_ID
-        sync: false
-      - key: OKTA_AGENT_PRIVATE_JWK
-        sync: false
       - key: OKTA_STRAVA_RESOURCE_INDICATOR
         sync: false

@@ -9,16 +9,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     session_secret: str = ""
 
-    # OIDC Web App (user login)
+    # AI Agent + linked OIDC Web App (shared Client ID/secret; user login and STS)
     okta_client_id: str = ""
     okta_client_secret: str = ""
     okta_domain: str = ""
     okta_redirect_uri: str = "http://localhost:8000/auth/callback"
     okta_post_logout_redirect_uri: str = ""
-
-    # AI Agent workload principal (API Services app)
-    okta_agent_client_id: str = ""
-    okta_agent_private_jwk: str = ""
 
     # APP_INSTANCE resource indicator ORN for the Strava connection
     okta_strava_resource_indicator: str = ""

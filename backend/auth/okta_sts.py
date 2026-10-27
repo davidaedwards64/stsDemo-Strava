@@ -4,14 +4,11 @@ Uses RFC 8693 token exchange with requested_token_type=oauth-sts.
 Handles the interaction_required case where the user must consent to Strava access.
 """
 
-import json
 import logging
 import time
-import uuid
 from typing import Any
 
 import httpx
-from jose import jwt
 
 from backend.config import get_settings
 
@@ -29,7 +26,7 @@ def clear_cached_token(cache_key: str) -> None:
 async def revoke_sts_token(cache_key: str) -> None:
     """Revoke the cached STS token at Okta's revoke endpoint, then clear the local cache entry.
 
-    Uses private_key_jwt client auth (same credentials as the original STS exchange).
+    Uses client_secret_post client auth (same credentials as the original STS exchange).
     Clears the cache entry regardless of whether revocation succeeds.
     NOTE: per OKTA-1153944, this only clears the *access token* from Okta's token store.
     If Okta still holds a valid refresh token, the next STS exchange will succeed again.
@@ -46,8 +43,8 @@ async def revoke_sts_token(cache_key: str) -> None:
         return
 
     settings = get_settings()
-    if not settings.okta_agent_client_id or not settings.okta_agent_private_jwk or not settings.okta_revoke_url:
-        logger.warning("[revoke_sts] Missing agent credentials or revoke URL — clearing cache only")
+    if not settings.okta_client_id or not settings.okta_client_secret or not settings.okta_revoke_url:
+        logger.warning("[revoke_sts] Missing client credentials or revoke URL — clearing cache only")
         _cache.pop(cache_key, None)
         return
 
@@ -56,19 +53,14 @@ async def revoke_sts_token(cache_key: str) -> None:
     logger.info("[revoke_sts] Revoking STS token %s for %s at %s", token_prefix, cache_key, revoke_url)
 
     try:
-        client_assertion = create_client_assertion_jwt(
-            settings.okta_agent_client_id,
-            settings.okta_agent_private_jwk,
-            revoke_url,
-        )
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 revoke_url,
                 data={
                     "token": access_token,
                     "token_type_hint": "oauth_sts",
-                    "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-                    "client_assertion": client_assertion,
+                    "client_id": settings.okta_client_id,
+                    "client_secret": settings.okta_client_secret,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
@@ -87,24 +79,6 @@ async def revoke_sts_token(cache_key: str) -> None:
     finally:
         _cache.pop(cache_key, None)
         logger.info("[revoke_sts] Local cache entry cleared for %s", cache_key)
-
-
-def create_client_assertion_jwt(client_id: str, private_jwk_str: str, token_url: str) -> str:
-    """Sign a short-lived RS256 JWT for use as client_assertion in the token exchange."""
-    private_jwk = json.loads(private_jwk_str)
-    now = int(time.time())
-    claims = {
-        "iss": client_id,
-        "sub": client_id,
-        "aud": token_url,
-        "iat": now,
-        "exp": now + 60,
-        "jti": str(uuid.uuid4()),
-    }
-    headers: dict[str, str] = {"alg": "RS256"}
-    if "kid" in private_jwk:
-        headers["kid"] = private_jwk["kid"]
-    return jwt.encode(claims, private_jwk, algorithm="RS256", headers=headers)
 
 
 async def exchange_id_token_for_strava_token(
@@ -129,10 +103,10 @@ async def exchange_id_token_for_strava_token(
     """
     settings = get_settings()
 
-    if not settings.okta_agent_client_id or not settings.okta_agent_private_jwk:
+    if not settings.okta_client_id or not settings.okta_client_secret:
         return {
             "status": "not_configured",
-            "error": "OKTA_AGENT_CLIENT_ID or OKTA_AGENT_PRIVATE_JWK not set",
+            "error": "OKTA_CLIENT_ID or OKTA_CLIENT_SECRET not set",
         }
 
     if not user_id_token:
@@ -148,18 +122,13 @@ async def exchange_id_token_for_strava_token(
 
     try:
         token_url = settings.okta_token_url
-        client_assertion = create_client_assertion_jwt(
-            settings.okta_agent_client_id,
-            settings.okta_agent_private_jwk,
-            token_url,
-        )
         payload: dict[str, str] = {
             "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
             "subject_token": user_id_token,
             "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
             "requested_token_type": "urn:okta:params:oauth:token-type:oauth-sts",
-            "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-            "client_assertion": client_assertion,
+            "client_id": settings.okta_client_id,
+            "client_secret": settings.okta_client_secret,
         }
         if settings.okta_strava_resource_indicator:
             payload["resource"] = settings.okta_strava_resource_indicator
