@@ -8,8 +8,10 @@ from pathlib import Path
 from typing import Any
 
 import anthropic
+import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
+from mcp.shared._httpx_utils import create_mcp_http_client
 
 from backend.auth.okta_sts import exchange_id_token_for_strava_token
 from backend.config import get_settings
@@ -118,6 +120,29 @@ def _leaf_exceptions(exc: BaseException) -> list[BaseException]:
     return [exc]
 
 
+async def _log_error_response(response: httpx.Response) -> None:
+    """httpx event hook: log status, WWW-Authenticate and body of failed MCP responses."""
+    if response.status_code >= 400:
+        await response.aread()
+        logger.warning(
+            "[strava_mcp] HTTP %s from %s — www-authenticate=%r body=%s",
+            response.status_code,
+            response.request.url,
+            response.headers.get("www-authenticate"),
+            response.text[:1000] or "(empty)",
+        )
+
+
+def _logging_http_client(
+    headers: dict[str, str] | None = None,
+    timeout: httpx.Timeout | None = None,
+    auth: httpx.Auth | None = None,
+) -> httpx.AsyncClient:
+    client = create_mcp_http_client(headers=headers, timeout=timeout, auth=auth)
+    client.event_hooks["response"].append(_log_error_response)
+    return client
+
+
 def _format_error(exc: BaseException) -> str:
     leaves = _leaf_exceptions(exc)
     parts = []
@@ -165,7 +190,7 @@ async def run_agent(
 
         yield _sse("status", {"text": "Connecting to Strava MCP..."})
 
-        async with streamablehttp_client(MCP_URL, headers=mcp_headers) as (read, write, _):
+        async with streamablehttp_client(MCP_URL, headers=mcp_headers, httpx_client_factory=_logging_http_client) as (read, write, _):
             async with ClientSession(read, write) as mcp:
                 await mcp.initialize()
 

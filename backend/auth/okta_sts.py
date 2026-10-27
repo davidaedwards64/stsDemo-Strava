@@ -158,6 +158,13 @@ async def exchange_id_token_for_strava_token(
 
         access_token = body.get("access_token", "")
         expires_in = int(body.get("expires_in", 3600))
+        logger.info(
+            "[sts] Exchange OK — token_type=%s issued_token_type=%s scope=%r expires_in=%s",
+            body.get("token_type"),
+            body.get("issued_token_type"),
+            body.get("scope"),
+            expires_in,
+        )
 
         result: dict[str, Any] = {
             "status": "success",
